@@ -25,8 +25,6 @@ export async function getImagesApi(query, page) {
 
 
 
-
-
 // import axios from 'axios';
 
 // axios.defaults.baseURL = 'https://pixabay.com/api/';
