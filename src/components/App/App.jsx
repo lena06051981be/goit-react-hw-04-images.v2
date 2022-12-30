@@ -1,5 +1,5 @@
 import { ImageGallery } from "components/ImageGallery/ImageGallery";
-import { Searchbar } from "components/Searchbar/Searchbar";
+import Searchbar from "components/Searchbar/Searchbar";
 import React, { useState, useEffect } from "react";
 import { getImagesApi } from '../../services/ApiService'
 import { ToastContainer, toast } from 'react-toastify';
@@ -15,7 +15,7 @@ import 'simplelightbox/dist/simple-lightbox.min.css';
 
 export function App() {
   const [images, setImages] = useState([]);
-  const [query, setQuery] = useState(null);
+  const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -30,28 +30,49 @@ export function App() {
     lightbox.refresh();
   };  
 
-  useEffect(() => { 
-    const fetchApi = async () => {                 
+  useEffect(() => {
+    if (!query) {
+      return;
+    }
+
+    const fetchApi = async () => {  
+      
+      if (page === 1) {
+        setLoading(true);
+        let res = await getImagesApi(query, page);
+        toast.success(`We found ${res.totalHits} images and photos`)
+        
+        setImages(images => [...res.hits]);
+        setTotalPages(Math.floor(res.totalHits / 12));
+        if (res.hits.length === 0) {
+          toast.success(
+            'Sorry, there are no images matching your search query. Please try again.'
+          );
+          setImages([]);
+          return;
+        }
+        setLoading(false);
+      }      
   
       if (page !== 1) {
         setLoading(true);
-        const res = await getImagesApi(query, page);
+        const res = await getImagesApi(query, page);        
         console.log(res);
   
-        setImages(images => [...images, ...res.hits]); 
+        setImages(images => [...images, ...res.hits]);
         setLoading(false);
-        };
+        };        
   
         if (page !== 1 ) {
           scroll('bottom');
         } else {
           scroll('top');
-        }    
+        }       
     };
     if (query && page) {
-      fetchApi();      
+      fetchApi();
     }
-  }, [page, query]);  
+  }, [page, query]); 
 
   const customId = "custom-id-yes"; //Prevent duplicate toast.warning
 
@@ -64,38 +85,20 @@ export function App() {
       });
   }}, [page, totalPages, images.length])
 
-  const onSubmit = async evt => {
-    evt.preventDefault();
-    const input = evt.target.elements.search;
-    const value = input.value.trim();
-    const page = 1;
-
-    if (value === '') {
+  const onSubmit = newSearchQuery => {
+    if (!newSearchQuery.trim()) {
       toast.success('Please, enter another search value!');
       setImages([]);
       return;
     }
 
-    setLoading(true);
-    const res = await getImagesApi(value, page);
-    toast.success(`We found ${res.totalHits} images and photos`)
-    console.log(res);
-    setLoading(false);
-
-    if (res.hits.length === 0) {
-      toast.success(
-        'Sorry, there are no images matching your search query. Please try again.'
-      );
-      setImages([]);
+    if (newSearchQuery === query) {
+      toast.warn('You are already on the page of this collection.');
       return;
     }
-
-    const totalPages = Math.floor(res.totalHits / 12);
-    
-      setImages(res.hits);
-      setQuery(value);
-      setPage(page);
-      setTotalPages(totalPages);    
+    setPage(1);
+    setImages([]);
+    setQuery(newSearchQuery);
   };  
 
   const loadMore = () => {
@@ -127,7 +130,7 @@ export function App() {
 
     return (      
       <Container>        
-        <Searchbar onSubmit={onSubmit} />
+        <Searchbar onFormSubmit={onSubmit} />
         {checkGalleryImg && <ImageGallery
               images={images}
               // onSelect={selectImg}
